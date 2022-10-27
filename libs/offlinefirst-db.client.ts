@@ -56,7 +56,8 @@ export class OfflineFirstDb extends Dexie {
     }
 
     _upsertTodoInOfflineStorage = async (cid: number, todo: Partial<TodoModel>) => {
-        const opId = 'todos:' + cid;
+        todo.lastModified = Date.now();
+        const opId = `todos:${cid}`;
         const offlineModel = await this.offlineStorage.get({ opId });
 
         if (offlineModel) {
@@ -64,6 +65,7 @@ export class OfflineFirstDb extends Dexie {
             return this.offlineStorage.update(offlineModel.cid!, {
                 rawModel: JSON.stringify(todo),
                 operation: 'upsert',
+                lastModified: Date.now(),
             });
         } else {
             // insert
@@ -72,6 +74,7 @@ export class OfflineFirstDb extends Dexie {
                 fromTable: 'todos',
                 operation: 'upsert',
                 rawModel: JSON.stringify(todo),
+                lastModified: Date.now(),
             });
         }
     }

@@ -54,15 +54,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // upsert
             const upsertOperations = tableOperations.filter(o => o.operation === 'upsert');
 
-            let bulkUpdateOps = upsertOperations.map(o => ({
-                updateOne: {
-                    filter: { cid: o.cid },
-                    update: { $set: JSON.parse(o.rawModel) },
-                    upsert: true
+            let bulkUpdateOps = upsertOperations.map(o => {
+                const model = JSON.parse(o.rawModel)
+                return {
+                    updateOne: {
+                        filter: { cid: model.cid },
+                        update: { $set: model },
+                        upsert: true
+                    }
                 }
-            }));
+            });
 
-            console.log("upsertModels", tableName, bulkUpdateOps);
             if (bulkUpdateOps.length > 0) {
                 const bulkWrite = await db
                     .collection(tableName)

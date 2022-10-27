@@ -4,4 +4,5 @@ export interface OfflineModel {
     fromTable: string;
     operation: 'delete' | 'upsert';
     rawModel: string;
+    lastModified: number;
 }

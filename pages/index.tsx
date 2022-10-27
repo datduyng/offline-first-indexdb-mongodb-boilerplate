@@ -24,7 +24,7 @@ export default function Home() {
           Welcome to <a href="https://nextjs.org">Next.js!</a>
         </h1>
         {/* Add todo input  */}
-        <input type="text" onKeyDown={(e) => {
+        <input type="text" onKeyDown={async (e) => {
           if (e.key === 'Enter') {
             addTodo({
               name: e.currentTarget.value,
