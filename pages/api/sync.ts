@@ -7,6 +7,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getMongoDbClient } from "../../libs/monogodb.server";
 import { OfflineModel } from "../../types/OfflineModel";
+import { TodoModel } from "../../types/TodoModel";
 
 type SyncModel = {
     operations: OfflineModel[],
@@ -56,6 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             let bulkUpdateOps = upsertOperations.map(o => {
                 const model = JSON.parse(o.rawModel)
+                delete model._id;
                 return {
                     updateOne: {
                         filter: { cid: model.cid },
@@ -69,14 +71,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 const bulkWrite = await db
                     .collection(tableName)
                     .bulkWrite(bulkUpdateOps);
-                return res.status(200).json({
-                    data: bulkWrite,
-                });
+                // return res.status(200).json({
+                //     data: bulkWrite,
+                // });
             }
         }
 
-        return res.status(200).json({ message: 'ok' });
+        // get all todos with column cid and lastModified
+        const todos = await db.collection('todos')
+            .find({}).toArray();
+
+            
+        // convert models array into a hashmap
+        const localTodoIds = models['todos'].reduce((acc, cur) => {
+            acc[cur.cid!] = cur;
+            return acc;
+        }, {} as { [cid: number]: Partial<TodoModel> });
+
+        const needToBeUpdated: {
+            [tableName: string]: { [cid: number]: TodoModel }
+        } = {
+            'todos': {}
+        };
+
+        // for each todo item in todos
+        todos.forEach(todo => {
+            // if the todo item is not in the models.todos
+            const localTodo = localTodoIds[todo.cid];
+
+            if (!localTodo) {
+                // add to needToBeUpdated
+                needToBeUpdated['todos'][todo.cid] = todo as any;
+            } else {
+                // compare lastModified
+                if (!localTodo.lastModified || todo.lastModified > localTodo.lastModified) {
+                    // add to needToBeUpdated
+                    needToBeUpdated['todos'][todo.cid] = todo as any;
+                }
+            }
+        });
+
+        return res.status(200).json({ needToBeUpdated });
     } catch (e) {
-        return res.status(500).json({ errorMessage: e.message });
+        // console.error(e);
+        return res.status(500).json({ errorMessage: (e as any).message });
     }
 }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Subject } from 'rxjs';
 import { OfflineModel } from '../types/OfflineModel';
+import { TodoModel } from '../types/TodoModel';
 import { offlineFirstDb } from './offlinefirst-db.client';
 import { useInterval } from './use-interval';
 
@@ -92,6 +93,12 @@ export const useOfflineSync = () => {
                                 'Content-Type': 'application/json'
                             }
                         }).then(res => res.json());
+
+                        const needToBeUpdated = data?.needToBeUpdated?.todos ? Object.values(data.needToBeUpdated.todos) as TodoModel[] : [];
+                        // bulk update
+                        if (needToBeUpdated.length > 0) {
+                            await offlineFirstDb.todos.bulkPut(needToBeUpdated);
+                        }
 
                         if (!data.errorMessage) {
                             const newOfflineStorage = await offlineFirstDb.offlineStorage.toArray();
