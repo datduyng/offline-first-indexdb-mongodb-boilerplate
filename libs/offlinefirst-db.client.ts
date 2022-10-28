@@ -15,8 +15,8 @@ export class OfflineFirstDb extends Dexie {
 
     constructor() {
         super('myDatabase');
-        this.version(1).stores({
-            todos: '++cid, name, done', // Primary key and indexed props
+        this.version(2).stores({
+            todos: '++cid, name, done, _isDeleted', // Primary key and indexed props
             offlineStorage: '++cid, opId, fromTable, rawModel',
         });
         // this._offlineService = new OfflineService();
@@ -52,7 +52,7 @@ export class OfflineFirstDb extends Dexie {
     }
 
     deleteTodo = (cid: number) => {
-        return this.updateTodo(cid, { cid, _isDeleted: true });
+        return this.updateTodo(cid, { cid, _isDeleted: 1 });
     }
 
     _upsertTodoInOfflineStorage = async (cid: number, todo: Partial<TodoModel>) => {

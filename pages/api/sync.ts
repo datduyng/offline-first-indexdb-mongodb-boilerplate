@@ -33,9 +33,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { operations, models } = req.body as SyncModel;
 
     try {
-        if (operations.length == 0) {
-            return res.status(200).json({ errorMessage: 'No operations' });
-        }
+        // if (operations.length == 0) {
+        //     return res.status(200).json({ errorMessage: 'No operations' });
+        // }
         const db = await getMongoDbClient();
 
         // group by table name
