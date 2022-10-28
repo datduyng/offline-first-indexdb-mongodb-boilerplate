@@ -1,22 +1,24 @@
-// db.ts
 import Dexie, { Table } from 'dexie';
 import { OfflineModel } from '../types/OfflineModel';
 import { OfModel } from '../types/OfModel';
 import { TodoModel } from '../types/TodoModel';
-import { OfflineService } from './offline-service.client';
 
-type TableName = 'todos';
+type TableName = 'todos' | 'notes' | 'userConfigs';
 
 class OfflineFirstDbV2 extends Dexie {
     // 'friends' is added by dexie when declaring the stores()
     // We just tell the typing system this is the case
     todos!: Table<TodoModel>;
+    notes!: Table<OfModel>;
+    userConfigs!: Table<OfModel>;
     _offlineStorage!: Table<OfflineModel>;
 
     constructor() {
         super('myDatabase');
         this.version(2).stores({
-            todos: '++cid, name, done, _isDeleted', // Primary key and indexed props
+            todos: '++cid, _isDeleted, name, done', // Primary key and indexed props
+            notes: '++cid, _isDeleted, name', // Primary key and indexed props
+            userConfigs: '++cid', // Primary key and indexed props
             _offlineStorage: '++cid, opId, fromTable, rawModel',
         });
     }
