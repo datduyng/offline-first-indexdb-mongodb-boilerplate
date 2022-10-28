@@ -75,10 +75,10 @@ export const useOfflineSync = () => {
         console.log('%c Syncing ⌚....', 'color: green');
         // push all and sync
         try {
-            await offlineFirstDb.transaction('rw', offlineFirstDb.todos, offlineFirstDb.offlineStorage, async () => {
-                const offlineStorage = await offlineFirstDb.offlineStorage.toArray();
+            await offlineFirstDb.transaction('rw', offlineFirstDb.todos, offlineFirstDb._offlineStorage, async () => {
+                const _offlineStorage = await offlineFirstDb._offlineStorage.toArray();
 
-                if (offlineStorage.length == 0 && !forceRefresh) {
+                if (_offlineStorage.length == 0 && !forceRefresh) {
                     console.log('%c No offline data to sync', 'color: yellow');
                     return;
                 }
@@ -88,7 +88,7 @@ export const useOfflineSync = () => {
                     const data = await fetch('/api/sync', {
                         method: 'POST',
                         body: JSON.stringify({
-                            operations: offlineStorage,
+                            operations: _offlineStorage,
                             models: {
                                 todos: (await offlineFirstDb.todos.toArray()).map(t => ({ lastModified: t.lastModified, cid: t.cid })),
                             }
@@ -108,23 +108,23 @@ export const useOfflineSync = () => {
                     }
 
                     if (!data.errorMessage) {
-                        const newOfflineStorage = await offlineFirstDb.offlineStorage.toArray();
+                        const newOfflineStorage = await offlineFirstDb._offlineStorage.toArray();
                         // convert array to map of cid
                         const newOfflineStorageMap = newOfflineStorage.reduce((acc, cur) => {
                             acc[cur.opId] = cur;
                             return acc;
                         }, {} as { [id: string]: OfflineModel });
 
-                        const deleteIds = offlineStorage.filter(op => {
+                        const deleteIds = _offlineStorage.filter(op => {
                             const newOp = newOfflineStorageMap[op.opId];
                             return newOp.lastModified <= op.lastModified;
                         }).map(op => op.cid!);
                         console.log(`Deletes: ${deleteIds}
-Origin: ${offlineStorage.map(op => op.cid!)}
+Origin: ${_offlineStorage.map(op => op.cid!)}
 `)
                         if (deleteIds.length > 0) {
 
-                            await offlineFirstDb.offlineStorage.bulkDelete(deleteIds);
+                            await offlineFirstDb._offlineStorage.bulkDelete(deleteIds);
                         }
                     }
                 } else {

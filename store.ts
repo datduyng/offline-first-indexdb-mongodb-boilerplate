@@ -37,7 +37,7 @@ const createTodoSlice = (set: ZustandSetState, get: ZustandGetState) => ({
         set({ todos })
     },
     addTodo: async (todo: TodoModel) => {
-        const cid = await offlineFirstDb.addTodo({
+        const cid = await offlineFirstDb.addOne('todos',{
             ...todo,
             done: 0,
         });
@@ -48,7 +48,7 @@ const createTodoSlice = (set: ZustandSetState, get: ZustandGetState) => ({
     updateTodo: async (todoId: number, todo: Partial<TodoModel>) => {
         todo.cid = todoId;
         // update todo to react local state
-        const cid = await offlineFirstDb.updateTodo(todo.cid!, todo);
+        const cid = await offlineFirstDb.updateOne('todos', todo.cid!, todo);
 
         // get current todo
         const currentTodo = get().todos.find(t => t.cid === todoId);

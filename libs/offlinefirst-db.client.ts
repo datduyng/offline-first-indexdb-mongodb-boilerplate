@@ -1,84 +1,81 @@
 // db.ts
 import Dexie, { Table } from 'dexie';
 import { OfflineModel } from '../types/OfflineModel';
+import { OfModel } from '../types/OfModel';
 import { TodoModel } from '../types/TodoModel';
 import { OfflineService } from './offline-service.client';
 
+type TableName = 'todos';
 
-export class OfflineFirstDb extends Dexie {
+class OfflineFirstDbV2 extends Dexie {
     // 'friends' is added by dexie when declaring the stores()
     // We just tell the typing system this is the case
     todos!: Table<TodoModel>;
-    offlineStorage!: Table<OfflineModel>;
-    // _offlineService: OfflineService;
-    // _offlineDb: any;
+    _offlineStorage!: Table<OfflineModel>;
 
     constructor() {
         super('myDatabase');
         this.version(2).stores({
             todos: '++cid, name, done, _isDeleted', // Primary key and indexed props
-            offlineStorage: '++cid, opId, fromTable, rawModel',
-        });
-        // this._offlineService = new OfflineService();
-    }
-
-    async updateTodo(cid: number, todo: Partial<TodoModel>) {
-        // get current todo
-        return this.transaction('rw', this.todos, this.offlineStorage, async () => {
-            const currentTodo = await this.todos.get(cid);
-
-            const updatedTodo: Partial<TodoModel> = {
-                ...currentTodo,
-                ...todo,
-            }
-
-            this._upsertTodoInOfflineStorage(cid, updatedTodo);
-
-            return this.todos.update(cid, updatedTodo);
+            _offlineStorage: '++cid, opId, fromTable, rawModel',
         });
     }
 
-    addTodo = async (todo: TodoModel) => {
-        return this.transaction('rw', this.todos, this.offlineStorage, async () => {
-            const cid = await this.todos.add(todo);
-            // if offline
-            // if (!this._offlineService.isOnline) {
-            await this._upsertTodoInOfflineStorage(cid as any, todo);
-            // }
+    addOne = async (tableName: TableName, data: Partial<OfModel>) => {
+        return this.transaction('rw', this.table(tableName), this._offlineStorage, async () => {
+            const cid = await this.table(tableName).add(data);
+            await this._upsertOfflineStorage(tableName, cid as any, data);
             return cid;
         }).then((cid) => {
             return cid;
         });
     }
 
-    deleteTodo = (cid: number) => {
-        return this.updateTodo(cid, { cid, _isDeleted: 1 });
+    deleteOne = (tableName: TableName, cid: number) => {
+        return this.updateOne(tableName, cid, { cid, _isDeleted: 1 });
     }
 
-    _upsertTodoInOfflineStorage = async (cid: number, todo: Partial<TodoModel>) => {
-        todo.lastModified = Date.now();
+    updateOne(tableName: TableName, cid: number, data: Partial<OfModel>) {
+        // validate table name
+        return this.transaction('rw', this.todos, this._offlineStorage, async () => {
+            const currentData = await this.table(tableName).get(cid);
+
+            const updatedData: Partial<OfModel> = {
+                ...currentData,
+                ...data,
+            }
+
+            this._upsertOfflineStorage(tableName, cid, updatedData);
+
+            return this.table(tableName).update(cid, updatedData);
+        });
+    }
+
+    async _upsertOfflineStorage(tableName: string, cid: number, data: Partial<OfModel>) {
+        // TODO: validate table name
+        data.lastModified = Date.now();
         const opId = `todos:${cid}`;
-        const offlineModel = await this.offlineStorage.get({ opId });
+        const offlineModel = await this._offlineStorage.get({ opId });
 
         if (offlineModel) {
             // update
-            return this.offlineStorage.update(offlineModel.cid!, {
-                rawModel: JSON.stringify(todo),
+            return this._offlineStorage.update(offlineModel.cid!, {
+                rawModel: JSON.stringify(data),
                 operation: 'upsert',
                 lastModified: Date.now(),
             });
         } else {
             // insert
-            return this.offlineStorage.add({
+            return this._offlineStorage.add({
                 opId,
-                fromTable: 'todos',
+                fromTable: tableName,
                 operation: 'upsert',
-                rawModel: JSON.stringify(todo),
+                rawModel: JSON.stringify(data),
                 lastModified: Date.now(),
             });
         }
     }
 }
 
-export const offlineFirstDb = new OfflineFirstDb();
+export const offlineFirstDb = new OfflineFirstDbV2();
 
