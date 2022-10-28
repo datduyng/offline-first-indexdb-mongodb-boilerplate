@@ -7,17 +7,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getMongoDbClient } from "../../libs/monogodb.server";
 import { OfflineModel } from "../../types/OfflineModel";
+import { SyncRequestInput } from "../../types/SyncRequestInput";
 import { TodoModel } from "../../types/TodoModel";
-
-type SyncModel = {
-    operations: OfflineModel[],
-    models: {
-        [tableName: string]: {
-            cid: number;
-            lastModified: number;
-        }[]
-    }
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { method } = req;
@@ -30,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ errorMessage: 'Bad request' });
     }
 
-    const { operations, models } = req.body as SyncModel;
+    const { operations, models } = req.body as SyncRequestInput;
 
     try {
         // if (operations.length == 0) {

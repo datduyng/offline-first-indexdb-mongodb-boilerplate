@@ -1,9 +1,36 @@
 import Dexie, { Table } from 'dexie';
+import { MetaSyncModel } from '../types/MetaSyncModel';
 import { OfflineModel } from '../types/OfflineModel';
 import { OfModel } from '../types/OfModel';
 import { TodoModel } from '../types/TodoModel';
 
 type TableName = 'todos' | 'notes' | 'userConfigs';
+
+type Config = {
+    lastSynced: number;
+}
+
+const META_SYNC_CONFIG_KEY = 'meta-sync-config';
+const defaultConfig: Config = {
+    lastSynced: 0,
+}
+// get and set localStorage
+export function getMetaSyncConfig() {
+    const value = localStorage.getItem(META_SYNC_CONFIG_KEY);
+    if (value) {
+        return JSON.parse(value) as Config;
+    }
+    // setMetaConfigSync(defaultConfig)
+    // localStorage.setItem(META_SYNC_CONFIG_KEY, JSON.stringify(defaultConfig));
+    return defaultConfig;
+};
+
+export const setMetaConfigSync = (value: Config) => {
+    localStorage.setItem(META_SYNC_CONFIG_KEY, JSON.stringify({
+        ...getMetaSyncConfig(),
+        ...value,
+    }));
+};
 
 class OfflineFirstDbV2 extends Dexie {
     // 'friends' is added by dexie when declaring the stores()

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Subject } from 'rxjs';
 import { useStore } from '../store';
 import { OfflineModel } from '../types/OfflineModel';
+import { SyncRequestInput } from '../types/SyncRequestInput';
 import { TodoModel } from '../types/TodoModel';
-import { offlineFirstDb } from './offlinefirst-db.client';
+import { getMetaSyncConfig, offlineFirstDb, setMetaConfigSync } from './offlinefirst-db.client';
 import { useInterval } from './use-interval';
 
 declare const window: any; //declare window object
@@ -88,7 +89,10 @@ export const useOfflineSync = () => {
                     const data = await fetch('/api/sync', {
                         method: 'POST',
                         body: JSON.stringify({
+                            lastSynced: getMetaSyncConfig().lastSynced,
                             operations: _offlineStorage,
+
+                            // TODO: remove
                             models: {
                                 todos: (await offlineFirstDb.todos.toArray()).map(t => ({ lastModified: t.lastModified, cid: t.cid })),
                             }
@@ -127,6 +131,9 @@ Origin: ${_offlineStorage.map(op => op.cid!)}
                             await offlineFirstDb._offlineStorage.bulkDelete(deleteIds);
                         }
                     }
+                    setMetaConfigSync({
+                        lastSynced: Date.now(),
+                    })
                 } else {
                     console.log('%c No internet connection', 'color: yellow');
                 }
